@@ -4,6 +4,31 @@ import os
 import shutil
 from pathlib import Path
 
+def prepare_environment():
+    mirror = os.environ.get("GITHUB_MIRROR", "https://github.com")
+    repo_url = f"{mirror.rstrip('/')}/neoluxis/keil_library_template.git"
+    template_marker = "libABC.uvmpw"
+
+    if os.path.exists(template_marker):
+        print(f"[OK] In repo detected. Ready to setup!")
+        return
+
+    print(f"[Info] Not in template repo, cloning...")
+    print(f"[URL] {repo_url}")
+    
+    try:
+        subprocess.run(["git", "clone", repo_url], check=True)
+        repo_name = "keil_library_template"
+        if os.path.exists(repo_name):
+            os.chdir(repo_name)
+            print(f"[Success] Entering repo: {os.getcwd()}")
+        else:
+            print("[Error] Cannot find folder, try to clone manually")
+            sys.exit(1)
+    except subprocess.CalledProcessError:
+        print(f"[Error] Cannot clone template from {repo_url}. Check you network or GitHub mirror setup in envvar GITHUB_MIRROR.")
+        sys.exit(1)
+
 def simple_replace(path, project, dryrun=True):
     if not os.path.exists(path): return
     with open(path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -131,6 +156,8 @@ def get_git_branches():
         return []
 
 def main(dryrun=True):
+    prepare_environment()
+    
     branch2target = {"main": "STM32F10x"}
     
     project_input = input("项目名称(不需要写lib): ")
