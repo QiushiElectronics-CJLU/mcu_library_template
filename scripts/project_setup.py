@@ -1,9 +1,30 @@
 #!env python3
 import subprocess
+import winreg
 import sys
 import os
 import shutil
 from pathlib import Path
+
+def find_keil_uv4():
+    key = r'Software\Keil\μVision5\Recent Projects'
+    try:
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, key,
+        ) as rk:
+            value, _ = winreg.QueryValueEx(rk, 'Project 1')
+            names = value.split('\\')
+            idx = names.index('ARM')
+            path = '/'.join(names[:idx])
+            path = '/'.join([path, 'UV4', 'UV4.exe'])
+            if os.path.exists(path):
+                return path
+            else: return None
+    except FileNotFoundError:
+        print("无法找到 Keil 安装")
+    except PermissionError:
+        print("权限不足（需要管理员）")
+    return None
 
 def prepare_environment():
     mirror = os.environ.get("GITHUB_MIRROR", "https://github.com")
@@ -41,8 +62,7 @@ def simple_replace(path, project, dryrun=True):
 
 def gen_versionsch(author, email, lic, target, dryrun=True):
     print(f"\n[Step] Generate versions: Target={target}")
-    header = f"""
-#ifndef __VERSIONS_H
+    header = f"""#ifndef __VERSIONS_H
 #define __VERSIONS_H
 
 const char* author = "author: {author}";
@@ -164,7 +184,7 @@ def main(dryrun=True):
     project_input = input("项目名称(不需要写lib): ")
     project = "lib" + project_input
     author = input("作者(seekit): ")
-    domain = input("倒序域名(seekit.dev): ")
+    domain = input("域名(seekit.dev): ")
     email = input("E-Mail: ")
     lic = input("开源证书(MIT): ")
 
@@ -217,13 +237,24 @@ def main(dryrun=True):
     gen_default_h("./libABC/Library/inc/dev/seekit/libABC/libABC.h", project, domain, dryrun)
 
     setup_project("seekit.dev", "libABC", domain, project, dryrun, verbose=True)
+    return project
 
 if __name__ == "__main__":
     is_dryrun = '--run' not in sys.argv
     try:
-        main(dryrun=is_dryrun)
+        project = main(dryrun=is_dryrun)
         if is_dryrun:
             print(f"\n{' Rehearsal Ends. Add cmdline argument --run to run. ':=^60}")
+        else:
+            opener = input("打开工作空间？(Y/n) ").lower()
+            if opener != 'y':
+                pass
+            keil = find_keil_uv4()
+            if not keil:
+                print("没有找到 Keil，请手动打开")
+            else:
+                subprocess.Popen([keil, f'{project}.uvmpw'])
+            
     except KeyboardInterrupt:
         print("\n\n[Quit] User interrupted")
         sys.exit(0)

@@ -6,7 +6,7 @@ rd /s /q "..\..\libABC_tests\Library\inc"
 :: Remove old lib
 del /f /q "..\..\libABC_tests\Library\libABC.lib"
 
-echo Moving .lib file£¨libABC.lib£©
+echo Moving .lib file 
 copy /y "build\libABC.lib" "..\..\libABC_tests\Library\"
 
 echo Moving headers
